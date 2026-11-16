@@ -121,6 +121,7 @@ main{position:relative;z-index:2}
 .screen{
   min-height:100vh;padding:clamp(90px,12vh,150px) clamp(20px,5vw,72px);
   display:flex;flex-direction:column;justify-content:center;
+  scroll-margin-top:80px; /* якорі не ховаються під фіксованим хедером */
 }
 .kicker{
   font-size:.8rem;letter-spacing:.22em;text-transform:uppercase;
@@ -178,10 +179,12 @@ h2{
   background:rgba(18,18,26,.5);
 }
 .ticker-track{
-  display:flex;gap:34px;align-items:center;width:max-content;
+  display:flex;align-items:center;width:max-content;
   animation:ticker 26s linear infinite;
   font-family:var(--font-display);font-weight:400;font-size:1rem;letter-spacing:.1em;
 }
+/* margin замість gap — інакше на межі двох копій стрибає анімація */
+.ticker-track span,.ticker-track i{margin-right:34px}
 .ticker-track i{color:var(--accent);font-style:normal}
 @keyframes ticker{to{transform:translateX(-50%)}}
 

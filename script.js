@@ -11,7 +11,6 @@
   const label = ring.querySelector(".cursor-label");
 
   const mouse = { x: innerWidth / 2, y: innerHeight / 2 };
-  const ringPos = { x: mouse.x, y: mouse.y };
 
   if (!isTouch && !reduced) {
     addEventListener("mousemove", (e) => {
@@ -22,6 +21,15 @@
 
     addEventListener("mousedown", () => ring.classList.add("pressing"));
     addEventListener("mouseup", () => ring.classList.remove("pressing"));
+
+    // кільце відстає від курсора з плавним лагом
+    const ringPos = { x: mouse.x, y: mouse.y };
+    (function ringLoop() {
+      ringPos.x += (mouse.x - ringPos.x) * 0.16;
+      ringPos.y += (mouse.y - ringPos.y) * 0.16;
+      ring.style.transform = `translate(${ringPos.x}px,${ringPos.y}px) translate(-50%,-50%)`;
+      requestAnimationFrame(ringLoop);
+    })();
 
     // магнітні елементи — курсор росте й показує підпис
     document.querySelectorAll("a, button, input, select, textarea, .tilt").forEach((el) => {
@@ -88,7 +96,8 @@
     cx = e.clientX * devicePixelRatio;
     cy = e.clientY * devicePixelRatio;
   }, { passive: true });
-  addEventListener("mouseout", () => { cx = cy = -9999; });
+  // mouseleave на документі (а не mouseout, який стріляє на кожному елементі)
+  document.documentElement.addEventListener("mouseleave", () => { cx = cy = -9999; });
 
   const LINK = 130 * devicePixelRatio;
   const CURSOR_PULL = 190 * devicePixelRatio;
@@ -168,17 +177,38 @@
 
   if (!isTouch && !reduced) {
     const chars = [...document.querySelectorAll(".k-char")];
-    addEventListener("mousemove", (e) => {
+    let bases = [];
+
+    // базові позиції міряємо без зсуву, інакше літери осцилюють навколо курсора
+    const recalc = () => {
       chars.forEach((c) => {
+        c.style.transition = "none";
+        c.style.transform = "";
+      });
+      void document.body.offsetWidth; // форс reflow
+      bases = chars.map((c) => {
         const r = c.getBoundingClientRect();
-        const dy = r.top + r.height / 2 - e.clientY;
-        const dist = Math.hypot(r.left + r.width / 2 - e.clientX, dy);
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+      });
+      chars.forEach((c) => (c.style.transition = ""));
+    };
+    recalc();
+    addEventListener("resize", recalc);
+    addEventListener("scroll", recalc, { passive: true });
+
+    addEventListener("mousemove", (e) => {
+      chars.forEach((c, i) => {
+        const b = bases[i];
+        if (!b) return;
+        const dx = b.x - e.clientX;
+        const dy = b.y - e.clientY;
+        const dist = Math.hypot(dx, dy);
         if (dist < 130) {
           const f = (1 - dist / 130) * 26;
-          const ang = Math.atan2(dy, r.left + r.width / 2 - e.clientX);
+          const ang = Math.atan2(dy, dx);
           c.style.transform = `translate(${Math.cos(ang) * f}px,${Math.sin(ang) * f}px)`;
           c.style.color = "var(--accent)";
-        } else {
+        } else if (c.style.transform) {
           c.style.transform = "";
           c.style.color = "";
         }
